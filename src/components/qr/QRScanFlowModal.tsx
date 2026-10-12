@@ -26,7 +26,7 @@ export const QRScanFlowModal: React.FC<QRScanFlowModalProps> = ({
   onSaveRecord,
 }) => {
   const [step, setStep] = useState<ScanStep>('scanner');
-  const [isScanningActive, setIsScanningActive] = useState<boolean>(false);
+  const [autoRecord, setAutoRecord] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
@@ -57,19 +57,32 @@ export const QRScanFlowModal: React.FC<QRScanFlowModalProps> = ({
     );
   });
 
-  const handleTriggerScan = (resident: Resident) => {
-    setIsScanningActive(true);
+  const handleResidentDetected = (resident: Resident) => {
+    if (autoRecord) {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      onSaveRecord(resident, 2000, 'Tercatat otomatis via kamera QR');
+      setLastSavedInfo({
+        resident,
+        nominal: 2000,
+        time: timeStr,
+        petugas: 'Petugas Ronda',
+      });
+      setStep('success');
+      return;
+    }
 
-    setTimeout(() => {
-      setIsScanningActive(false);
-      setSelectedResident(resident);
-      setNominal(2000);
-      setIsCustomNominal(false);
-      setCustomNominal('');
-      setCatatan('');
-      setIsCorrecting(false);
-      setStep('form');
-    }, 350);
+    setSelectedResident(resident);
+    setNominal(2000);
+    setIsCustomNominal(false);
+    setCustomNominal('');
+    setCatatan('');
+    setIsCorrecting(false);
+    setStep('form');
+  };
+
+  const handleTriggerScan = (resident: Resident) => {
+    handleResidentDetected(resident);
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -116,7 +129,7 @@ export const QRScanFlowModal: React.FC<QRScanFlowModalProps> = ({
               {step === 'success' && 'Tarikan Tersimpan'}
             </h3>
             <p className="text-xs text-[var(--color-text-secondary)]">
-              Sistem Jimpitan Digital RT 02 / RW 07 BDA
+              JIMPITANKU by Perum BDA • RT 02 / RW 07
             </p>
           </div>
 
@@ -136,7 +149,10 @@ export const QRScanFlowModal: React.FC<QRScanFlowModalProps> = ({
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             filteredResidents={filteredResidents}
-            isScanning={isScanningActive}
+            residents={residents}
+            autoRecord={autoRecord}
+            onToggleAutoRecord={setAutoRecord}
+            onResidentDetected={handleResidentDetected}
             onSelectResident={handleTriggerScan}
           />
         )}
