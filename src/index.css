@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* ================================================================
+   DESIGN SYSTEM — Sistem Jimpitan Digital BDA
+   Identitas Warna: Merah & Hitam Elegan Khas Logo BDA (Bumi Dukuh Asri)
+   Font: Plus Jakarta Sans & JetBrains Mono (Tabular Figures)
+   Referensi: Mobile Wallet (iOS Fintech) & Dashboard SaaS (OripioFin)
+   ================================================================ */
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+@layer base {
+  :root {
+    /* Identitas Primer Khas Logo BDA (Merah & Crimson Karakteristik) */
+    --color-primary: hsl(354, 84%, 48%);        /* Merah BDA #e01b3c / #dc2626 */
+    --color-primary-hover: hsl(354, 88%, 42%);  /* Hover state */
+    --color-primary-light: hsl(354, 100%, 97%); /* Background lembut badge merah */
+    --color-primary-dark: hsl(354, 85%, 22%);   /* Header gelap / gradient card */
+    --color-primary-subtle: hsl(354, 90%, 93%); /* Border lembut */
+
+    /* Warna Tugu & Monumen BDA (Dark Charcoal & Deep Slate) */
+    --color-bda-dark: hsl(222, 47%, 10%);       /* #090d16 / Hitam Elegan BDA */
+    --color-bda-charcoal: hsl(222, 35%, 15%);   /* Latar kartu monumen */
+
+    /* Status Finansial Semantik */
+    --color-success: hsl(152, 69%, 36%);        /* Hijau Lunas Harian & Kas Masuk */
+    --color-success-bg: hsl(152, 60%, 95%);
+    --color-monthly: hsl(199, 89%, 40%);        /* Biru Langit Iuran Bulanan Warga */
+    --color-monthly-bg: hsl(199, 80%, 95%);
+    --color-warning: hsl(38, 92%, 48%);         /* Amber Perlu Verifikasi / Sebagian */
+    --color-warning-bg: hsl(38, 90%, 95%);
+    --color-danger: hsl(0, 84%, 50%);           /* Belum Bayar / Selisih */
+    --color-danger-bg: hsl(0, 85%, 96%);
+    --color-neutral-muted: hsl(220, 10%, 55%);
+    --color-neutral-bg: hsl(220, 14%, 95%);
+
+    /* Surface, Border, Teks (iOS & Modern Web Precision) */
+    --color-surface: hsl(0, 0%, 100%);
+    --color-surface-subtle: hsl(220, 18%, 97%);  /* #f8fafc */
+    --color-border: hsl(220, 13%, 91%);         /* Border garis presisi */
+    --color-text-primary: hsl(222, 47%, 11%);    /* #0f172a */
+    --color-text-secondary: hsl(220, 10%, 46%);
+    --color-text-disabled: hsl(220, 10%, 72%);
+
+    /* Skala Border Radius Presisi (Mengikuti Referensi 24px-28px Rounded) */
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-2xl: 28px;
+    --radius-full: 9999px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-color: var(--color-surface-subtle);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+  }
+
+  /* Angka rupiah tabular figures sejajar rapi */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+/* Scrollbar minimalis */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(220, 13%, 82%);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(220, 10%, 64%);
+}
+
+/* Cetak laporan resmi RT */
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
