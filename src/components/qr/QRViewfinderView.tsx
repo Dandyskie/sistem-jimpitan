@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Search, QrCode, AlertCircle, RefreshCw, Zap } from 'lucide-react';
+import { Search, QrCode, AlertCircle, RefreshCw, Zap, CheckCircle2 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { Resident } from '../../types';
+import { playScannerBeep, matchResidentFromQr } from '../../utils/scannerUtils';
 
 interface QRViewfinderViewProps {
   searchQuery: string;
@@ -10,65 +11,15 @@ interface QRViewfinderViewProps {
   residents: Resident[];
   autoRecord: boolean;
   onToggleAutoRecord: (val: boolean) => void;
+  scanToast: { nama: string; rumah: string; nominal: number } | null;
+  onClearScanToast: () => void;
   onResidentDetected: (resident: Resident) => void;
   onSelectResident: (res: Resident) => void;
 }
 
 /**
- * Bunyikan suara 'beep' pendek via Web Audio API saat barcode kaleng terdeteksi.
- */
-function playScannerBeep(): void {
-  try {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.12);
-  } catch {
-    // Web Audio tidak didukung atau diblokir browser, abaikan dengan aman
-  }
-}
-
-/**
- * Ekstrak ID dan cocokkan rumah warga dari URL atau teks QR Code.
- */
-export function matchResidentFromQr(qrData: string, residents: Resident[]): Resident | null {
-  const trimmed = qrData.trim();
-  let targetId = trimmed;
-
-  if (trimmed.includes('/warga/')) {
-    const parts = trimmed.split('/warga/');
-    targetId = decodeURIComponent(parts[parts.length - 1].split('?')[0].replace(/\/$/, ''));
-  }
-
-  const exact = residents.find((r) => r.id === targetId);
-  if (exact) return exact;
-
-  const noRumah = residents.find((r) => r.noRumah.toLowerCase() === targetId.toLowerCase());
-  if (noRumah) return noRumah;
-
-  const combined = residents.find((r) => {
-    const key1 = `${r.blok.replace('Blok ', '')}-${r.noRumah}`.toLowerCase();
-    const key2 = `${r.blok}-${r.noRumah}`.toLowerCase();
-    return targetId.toLowerCase().includes(key1) || targetId.toLowerCase().includes(key2);
-  });
-  if (combined) return combined;
-
-  return null;
-}
-
-/**
  * Tampilan Bidik Kamera Asli (Live Camera Video Stream) dengan pendeteksian otomatis via jsQR.
+ * Mendukung rekam otomatis tanpa modal mengganggu dan notifikasi toast auto-fade 1.8s.
  */
 export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
   searchQuery,
@@ -77,6 +28,8 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
   residents,
   autoRecord,
   onToggleAutoRecord,
+  scanToast,
+  onClearScanToast,
   onResidentDetected,
   onSelectResident,
 }) => {
@@ -84,9 +37,18 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
-  const [detectedToast, setDetectedToast] = useState<string | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameId = useRef<number | null>(null);
+  const lastScannedTimeRef = useRef<number>(0);
+
+  // Auto-dismiss scan toast setelah 1.8 detik
+  useEffect(() => {
+    if (!scanToast) return;
+    const timer = setTimeout(() => {
+      onClearScanToast();
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [scanToast, onClearScanToast]);
 
   // Mulai streaming kamera ponsel/laptop
   const startCamera = useCallback(async () => {
@@ -111,9 +73,8 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
         await videoRef.current.play();
         setIsCameraActive(true);
       }
-    } catch (err: unknown) {
-      console.warn('Gagal mengaktifkan kamera:', err);
-      setCameraError('Izin kamera ditolak atau tidak ditemukan perangkat kamera.');
+    } catch {
+      setCameraError('Izin kamera ditolak atau perangkat kamera tidak tersedia.');
       setIsCameraActive(false);
     }
   }, []);
@@ -131,7 +92,6 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
     setIsCameraActive(false);
   }, []);
 
-  // Loop pemindaian frame video terus-menerus
   useEffect(() => {
     startCamera();
     return () => stopCamera();
@@ -146,7 +106,8 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA && !isScanningFrame) {
+      const canScan = video && canvas && video.readyState === video.HAVE_ENOUGH_DATA && !isScanningFrame;
+      if (canScan) {
         isScanningFrame = true;
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -159,14 +120,16 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
             inversionAttempts: 'dontInvert',
           });
 
-          if (code && code.data) {
+          const now = Date.now();
+          const cooldownPassed = now - lastScannedTimeRef.current > 1500;
+
+          if (code && code.data && cooldownPassed) {
             const matched = matchResidentFromQr(code.data, residents);
             if (matched) {
+              lastScannedTimeRef.current = now;
               playScannerBeep();
               if (navigator.vibrate) navigator.vibrate(80);
-              setDetectedToast(`QR Terbaca: ${matched.nama} (${matched.blok} No. ${matched.noRumah})`);
               onResidentDetected(matched);
-              return;
             }
           }
         }
@@ -225,8 +188,23 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
           className={`w-full h-full object-cover ${cameraError ? 'hidden' : 'block'}`}
         />
 
-        {/* Canvas Tersembunyi untuk Decoder jsQR */}
         <canvas ref={canvasRef} className="hidden" />
+
+        {/* Notifikasi Ringan Melayang Otomatis Hilang (Non-intrusif) */}
+        {scanToast && (
+          <div className="absolute top-3 inset-x-3 z-30 p-2.5 bg-emerald-900/95 backdrop-blur-md text-white rounded-xl shadow-lg border border-emerald-400/50 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-black truncate">{scanToast.rumah} • {scanToast.nama}</p>
+                <p className="text-[10px] text-emerald-200 font-medium">Rp {scanToast.nominal.toLocaleString('id-ID')} tercatat</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-800 text-emerald-100 shrink-0">
+              Siap Scan Berikutnya
+            </span>
+          </div>
+        )}
 
         {/* Overlay Kotak Bidik Target Barcode */}
         {!cameraError && (
@@ -236,8 +214,6 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
               <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-emerald-400 -mt-1 -mr-1 rounded-tr-lg" />
               <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-emerald-400 -mb-1 -ml-1 rounded-bl-lg" />
               <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-emerald-400 -mb-1 -mr-1 rounded-br-lg" />
-
-              {/* Garis Animasi Laser Pindai */}
               <div className="absolute inset-x-2 h-0.5 bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse" />
             </div>
 
@@ -262,19 +238,12 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
             </button>
           </div>
         )}
-
-        {/* Notifikasi QR Terdeteksi */}
-        {detectedToast && (
-          <div className="absolute top-3 inset-x-4 p-2 bg-emerald-600 text-white text-xs font-bold text-center rounded-xl shadow-lg animate-in fade-in">
-            {detectedToast}
-          </div>
-        )}
       </div>
 
       {/* Simulator / Pilihan Alternatif Cepat Manual */}
       <div className="space-y-1.5 pt-1">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] block">
-          Atau Pilih Kaleng Manual (Jika Gelap / Hujan)
+          Pilihan Manual (Jika Hujan / Kondisi Gelap)
         </span>
 
         <div className="relative">
@@ -288,8 +257,8 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
           />
         </div>
 
-        <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
-          {filteredResidents.slice(0, 10).map((res) => (
+        <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
+          {filteredResidents.slice(0, 8).map((res) => (
             <button
               key={res.id}
               type="button"

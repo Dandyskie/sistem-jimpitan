@@ -59,9 +59,20 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [pendingVerif, setPendingVerif] = useState<DailyVerification | null>(null);
 
   useEffect(() => {
-    DataService.getDailyVerification(todayDate)
-      .then((verif) => setPendingVerif(verif))
-      .catch((err) => console.warn('Gagal memuat status verifikasi:', err));
+    const checkVerif = () => {
+      DataService.getDailyVerification(todayDate)
+        .then((verif) => setPendingVerif(verif))
+        .catch((err) => console.warn('Gagal memuat status verifikasi:', err));
+    };
+
+    checkVerif();
+    const timer = setInterval(checkVerif, 3500);
+    window.addEventListener('storage', checkVerif);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('storage', checkVerif);
+    };
   }, [todayDate]);
 
   /* Kalkulasi statistik keuangan kas */

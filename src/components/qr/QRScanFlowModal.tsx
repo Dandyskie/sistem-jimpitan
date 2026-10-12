@@ -38,6 +38,8 @@ export const QRScanFlowModal: React.FC<QRScanFlowModalProps> = ({
   const [catatan, setCatatan] = useState<string>('');
   const [isCorrecting, setIsCorrecting] = useState<boolean>(false);
 
+  const [scanToast, setScanToast] = useState<{ nama: string; rumah: string; nominal: number } | null>(null);
+
   const [lastSavedInfo, setLastSavedInfo] = useState<{
     resident: Resident;
     nominal: number;
@@ -59,16 +61,12 @@ export const QRScanFlowModal: React.FC<QRScanFlowModalProps> = ({
 
   const handleResidentDetected = (resident: Resident) => {
     if (autoRecord) {
-      const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       onSaveRecord(resident, 2000, 'Tercatat otomatis via kamera QR');
-      setLastSavedInfo({
-        resident,
+      setScanToast({
+        nama: resident.nama,
+        rumah: `${resident.blok} No. ${resident.noRumah}`,
         nominal: 2000,
-        time: timeStr,
-        petugas: 'Petugas Ronda',
       });
-      setStep('success');
       return;
     }
 
@@ -152,6 +150,8 @@ export const QRScanFlowModal: React.FC<QRScanFlowModalProps> = ({
             residents={residents}
             autoRecord={autoRecord}
             onToggleAutoRecord={setAutoRecord}
+            scanToast={scanToast}
+            onClearScanToast={() => setScanToast(null)}
             onResidentDetected={handleResidentDetected}
             onSelectResident={handleTriggerScan}
           />
