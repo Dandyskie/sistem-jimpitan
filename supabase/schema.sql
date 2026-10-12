@@ -52,11 +52,11 @@ CREATE TABLE public.warga (
 -- -----------------------------------------------------------------------------
 CREATE TABLE public.jimpitan_records (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  warga_id            UUID NOT NULL REFERENCES public.warga(id) ON DELETE CASCADE,
+  warga_id            TEXT NOT NULL,
   tanggal             DATE NOT NULL,          -- Tanggal malam ronda
   nominal             BIGINT NOT NULL DEFAULT 0,
   status              TEXT NOT NULL CHECK (status IN ('lunas', 'sebagian', 'kosong')),
-  petugas_id          UUID NOT NULL REFERENCES auth.users(id),
+  petugas_id          TEXT NOT NULL DEFAULT 'usr-ronda',
   petugas_nama        TEXT,
   catatan             TEXT,
   created_at          TIMESTAMPTZ DEFAULT now(),
@@ -69,7 +69,7 @@ CREATE TABLE public.jimpitan_records (
 CREATE TABLE public.daily_verifications (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tanggal               DATE NOT NULL UNIQUE,
-  petugas_id            UUID NOT NULL REFERENCES auth.users(id),
+  petugas_id            TEXT NOT NULL DEFAULT 'usr-ronda',
   petugas_nama          TEXT,
   total_rumah_tercatat  INTEGER NOT NULL DEFAULT 0,
   total_nominal_sistem  BIGINT NOT NULL DEFAULT 0,      -- Angka tercatat di HP petugas
@@ -78,7 +78,7 @@ CREATE TABLE public.daily_verifications (
   status                TEXT NOT NULL DEFAULT 'pending' 
                         CHECK (status IN ('pending', 'verified', 'flagged')),
   catatan_selisih       TEXT,
-  verified_by           UUID REFERENCES auth.users(id),
+  verified_by           TEXT,
   verified_at           TIMESTAMPTZ,
   created_at            TIMESTAMPTZ DEFAULT now()
 );
@@ -94,9 +94,9 @@ CREATE TABLE public.kas_transactions (
   tanggal           DATE NOT NULL,
   deskripsi         TEXT NOT NULL,
   penanggung_jawab  TEXT NOT NULL,
-  warga_id          UUID REFERENCES public.warga(id) ON DELETE SET NULL,
+  warga_id          TEXT,
   bukti_url         TEXT,
-  created_by        UUID NOT NULL REFERENCES auth.users(id),
+  created_by        TEXT DEFAULT 'usr-bendahara',
   created_at        TIMESTAMPTZ DEFAULT now()
 );
 
@@ -132,67 +132,11 @@ ALTER TABLE public.jimpitan_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_verifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kas_transactions ENABLE ROW LEVEL SECURITY;
 
--- Kebijakan Profiles
-CREATE POLICY "Profiles can be viewed by authenticated users"
-  ON public.profiles FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Users can update their own profile"
-  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
-
--- Kebijakan Warga
-CREATE POLICY "Warga can be viewed by authenticated users"
-  ON public.warga FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Warga public read-only for citizen portal"
-  ON public.warga FOR SELECT TO anon USING (status = 'aktif');
-
-CREATE POLICY "Bendahara can insert warga"
-  ON public.warga FOR INSERT TO authenticated WITH CHECK (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'bendahara')
-  );
-
-CREATE POLICY "Bendahara can update warga"
-  ON public.warga FOR UPDATE TO authenticated USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'bendahara')
-  );
-
--- Kebijakan Jimpitan Records
-CREATE POLICY "Petugas and Bendahara can view jimpitan records"
-  ON public.jimpitan_records FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Petugas can insert jimpitan records"
-  ON public.jimpitan_records FOR INSERT TO authenticated WITH CHECK (auth.uid() = petugas_id);
-
-CREATE POLICY "Petugas can update their own today records"
-  ON public.jimpitan_records FOR UPDATE TO authenticated USING (
-    auth.uid() = petugas_id AND tanggal = CURRENT_DATE
-  );
-
-CREATE POLICY "Bendahara can manage jimpitan records"
-  ON public.jimpitan_records FOR ALL TO authenticated USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'bendahara')
-  );
-
--- Kebijakan Daily Verifications
-CREATE POLICY "Authenticated users can view daily verifications"
-  ON public.daily_verifications FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Petugas can insert daily verifications"
-  ON public.daily_verifications FOR INSERT TO authenticated WITH CHECK (auth.uid() = petugas_id);
-
-CREATE POLICY "Bendahara can update daily verifications"
-  ON public.daily_verifications FOR UPDATE TO authenticated USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'bendahara')
-  );
-
--- Kebijakan Kas Transactions
-CREATE POLICY "Authenticated users can view kas transactions"
-  ON public.kas_transactions FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Bendahara can manage kas transactions"
-  ON public.kas_transactions FOR ALL TO authenticated USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'bendahara')
-  );
+CREATE POLICY "Akses penuh profiles" ON public.profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Akses penuh warga" ON public.warga FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Akses penuh jimpitan" ON public.jimpitan_records FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Akses penuh verifikasi" ON public.daily_verifications FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Akses penuh kas" ON public.kas_transactions FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- -----------------------------------------------------------------------------
 -- 10. Realtime Publications (Aman & Idempotent)
