@@ -59,7 +59,7 @@ export const PortalWargaView: React.FC<PortalWargaViewProps> = ({
     if (typeof window !== 'undefined') {
       navigator.clipboard?.writeText(window.location.href);
       setToastMessage('Tautan transparansi rumah berhasil disalin!');
-      setTimeout(() => setToastMessage(null), 3000);
+      setTimeout(() => setToastMessage(null), 700);
     }
   };
 

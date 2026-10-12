@@ -200,7 +200,7 @@ export const PetugasDashboard: React.FC<PetugasDashboardProps> = ({
       setTimeout(() => {
         setIsSettlementModalOpen(false);
         setSettlementSuccess(false);
-      }, 1600);
+      }, 700);
     } catch (err) {
       console.error('Gagal mengirim rekonsiliasi setoran:', err);
     } finally {

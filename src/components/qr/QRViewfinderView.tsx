@@ -46,7 +46,7 @@ export const QRViewfinderView: React.FC<QRViewfinderViewProps> = ({
     if (!scanToast) return;
     const timer = setTimeout(() => {
       onClearScanToast();
-    }, 1800);
+    }, 700);
     return () => clearTimeout(timer);
   }, [scanToast, onClearScanToast]);
 

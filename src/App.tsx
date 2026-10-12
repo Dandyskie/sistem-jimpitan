@@ -66,6 +66,9 @@ export const AppContent: React.FC = () => {
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 700);
   };
 
   const removeToast = (id: string) => {

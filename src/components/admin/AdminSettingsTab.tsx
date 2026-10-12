@@ -38,7 +38,7 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
   const handleSaveAllGroups = () => {
     saveRondaGroupsConfig(rondaGroups);
     setSaveSuccessMsg('Konfigurasi 7 Grup Ronda berhasil disimpan!');
-    setTimeout(() => setSaveSuccessMsg(null), 3000);
+    setTimeout(() => setSaveSuccessMsg(null), 700);
   };
 
   return (

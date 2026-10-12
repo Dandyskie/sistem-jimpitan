@@ -93,7 +93,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const todayJimpitanAmount = todayRecords.reduce((sum, r) => sum + r.nominal, 0);
 
   const paidResidentIds = new Set(
-    todayRecords.filter((r) => r.status === 'lunas' || r.nominal > 0).map((r) => r.residentId)
+    todayRecords.filter((r) => r.status === 'lunas' || r.nominal > 0).map((r) => r.residentId || r.warga_id)
   );
   const paidCount = paidResidentIds.size;
   const progressPercent = totalHouses > 0 ? Math.round((paidCount / totalHouses) * 100) : 0;
