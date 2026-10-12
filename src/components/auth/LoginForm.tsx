@@ -1,6 +1,8 @@
 import React from 'react';
 import { Role } from '../../types';
-import { Lock, User, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Lock, User, AlertCircle, Eye, EyeOff, Sparkles, Users } from 'lucide-react';
+import { getTodayRondaGroup } from '../../data/rondaGroups';
+import { FullscreenButton } from '../common/FullscreenButton';
 
 interface LoginFormProps {
   isAdmin: boolean;
@@ -18,7 +20,7 @@ interface LoginFormProps {
 }
 
 /**
- * Komponen formulir login modern dengan estetika fintech BDA
+ * Komponen formulir login modern JIMPITANKU by Perum BDA (Bumi Dukuh Asri)
  */
 export const LoginForm: React.FC<LoginFormProps> = ({
   isAdmin,
@@ -34,28 +36,33 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   handleQuickFill,
   onNavigateUrl,
 }) => {
+  const todayGroup = getTodayRondaGroup();
+
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto relative">
       {/* Header khusus tampilan mobile */}
-      <div className="flex flex-col items-center mb-6 md:hidden text-center">
-        <div className="relative mb-3">
+      <div className="flex flex-col items-center mb-6 md:hidden text-center relative">
+        <div className="absolute right-0 top-0">
+          <FullscreenButton />
+        </div>
+
+        <div className="mb-3">
           <img
             src="/bda-logo.jpg"
             alt="Logo Bumi Dukuh Asri"
             className="w-16 h-16 rounded-2xl object-cover shadow-md border border-slate-200/80"
           />
-          <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-red-600 rounded-full border-2 border-white" />
         </div>
         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200/60 mb-2">
           RT 02 / RW 07 BUMI DUKUH ASRI
         </span>
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-          {isAdmin ? 'Portal Bendahara' : 'Portal Petugas Ronda'}
+          {isAdmin ? 'Portal Bendahara' : 'JIMPITANKU Ronda'}
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
           {isAdmin
             ? 'Akses dashboard pencatatan kas & audit warga'
-            : 'Sistem tarikan jimpitan kaleng & QR malam'}
+            : todayGroup.salam}
         </p>
       </div>
 
@@ -63,15 +70,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       <div className="hidden md:block mb-6">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200/60 mb-3">
           <Sparkles className="w-3.5 h-3.5 text-red-600" />
-          {isAdmin ? 'Akses Eksekutif Kas' : 'Akses Operasional Lapangan'}
+          {isAdmin ? 'Akses Eksekutif Kas RT' : 'JIMPITANKU by Perum BDA'}
         </span>
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-          {isAdmin ? 'Masuk ke Dashboard' : 'Mulai Rute Ronda'}
+          {isAdmin ? 'Masuk ke Dashboard' : todayGroup.salam}
         </h2>
         <p className="text-sm text-slate-500 mt-1">
           {isAdmin
             ? 'Kelola buku kas, iuran warga, dan verifikasi mutasi harian.'
-            : 'Masuk untuk mencatat tarikan kaleng dan saldo dompet regu.'}
+            : `Petugas jaga malam ini: ${todayGroup.namaGrup} (Koord: ${todayGroup.koordinator}).`}
         </p>
       </div>
 
@@ -179,11 +186,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold">Regu Ronda</span>
+              <span className="text-xs font-bold flex items-center gap-1 truncate">
+                <Users className="w-3 h-3 text-red-600 shrink-0" />
+                {todayGroup.hari}
+              </span>
               {!isAdmin && <span className="w-1.5 h-1.5 rounded-full bg-red-600" />}
             </div>
             <span className="text-[11px] text-slate-500 block truncate mt-0.5">
-              petugas@jimpitan.local
+              {todayGroup.namaGrup}
             </span>
           </button>
         </div>

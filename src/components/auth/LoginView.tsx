@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { AuthUser, Role } from '../../types';
 import { LoginForm } from './LoginForm';
 import { ShieldCheck, BarChart3, CheckCircle2 } from 'lucide-react';
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from '../../utils/security';
+import { getTodayRondaGroup } from '../../data/rondaGroups';
 
 interface LoginViewProps {
   expectedRole: Role;
@@ -10,7 +12,7 @@ interface LoginViewProps {
 }
 
 /**
- * Validasi kredensial login akun demo
+ * Validasi kredensial login akun demo & penetapan 7 grup ronda bergilir harian
  */
 function authenticateCredentials(
   identifier: string,
@@ -27,7 +29,7 @@ function authenticateCredentials(
       nama: 'Bpk. Mulyadi',
       usernameOrEmail: identifier,
       role: 'bendahara',
-      jabatan: 'Bendahara Kas BDA',
+      jabatan: 'Bendahara Kas RT BDA',
     };
   }
 
@@ -36,12 +38,13 @@ function authenticateCredentials(
   const isPetugas = expectedRole === 'petugas_ronda';
 
   if (isPetugas && petugasIds.includes(identifier) && petugasPasswords.includes(pass)) {
+    const todayGroup = getTodayRondaGroup();
     return {
-      id: 'usr-ronda',
-      nama: 'Rama & Regu Ronda BDA',
+      id: `usr-${todayGroup.id}`,
+      nama: todayGroup.namaGrup,
       usernameOrEmail: identifier,
       role: 'petugas_ronda',
-      jabatan: 'Petugas Ronda Lapangan',
+      jabatan: todayGroup.salam,
     };
   }
 
@@ -49,7 +52,8 @@ function authenticateCredentials(
 }
 
 /**
- * Tampilan login utama dengan dukungan responsif 2-kolom pada dashboard
+ * Tampilan login utama dengan proteksi Cybersecurity (Anti-Brute Force)
+ * JIMPITANKU by Perum BDA (Bumi Dukuh Asri)
  */
 export const LoginView: React.FC<LoginViewProps> = ({
   expectedRole,
@@ -69,15 +73,33 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    setIsLoading(true);
 
     const identifier = emailOrUsername.trim().toLowerCase();
+
+    // 1. Pengecekan Rate Limiting / Anti-Brute Force
+    const rateCheck = checkLoginRateLimit(identifier);
+    if (!rateCheck.allowed) {
+      setErrorMessage(
+        `Akses terkunci sementara karena 5x percobaan gagal (Anti-Brute Force). Tunggu ${rateCheck.remainingLockoutSeconds} detik.`
+      );
+      return;
+    }
+
+    setIsLoading(true);
 
     setTimeout(() => {
       setIsLoading(false);
       const user = authenticateCredentials(identifier, password, expectedRole);
 
       if (!user) {
+        const failRecord = recordFailedLogin(identifier);
+        if (failRecord.isLockedOut) {
+          setErrorMessage(
+            'Akun dikunci sementara 60 detik karena 5x gagal berturut-turut (Cybersecurity Defense).'
+          );
+          return;
+        }
+
         const hint = isAdmin
           ? 'Kredensial admin tidak valid. Gunakan admin@jimpitan.local / admin123.'
           : 'Kredensial petugas tidak valid. Gunakan petugas@jimpitan.local / petugas123.';
@@ -85,6 +107,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         return;
       }
 
+      resetLoginRateLimit(identifier);
       onLogin(user);
     }, 250);
   };
@@ -129,10 +152,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
               />
               <div>
                 <span className="font-bold text-slate-900 block leading-tight">
-                  Jimpitan Digital BDA
+                  JIMPITANKU by Perum BDA
                 </span>
                 <span className="text-[11px] text-slate-400 font-medium">
-                  RT 02 / RW 07 Sukoharjo
+                  RT 02 / RW 07 Bumi Dukuh Asri
                 </span>
               </div>
             </div>
@@ -142,7 +165,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
         {/* Kolom Kanan: Panel Visual Showcase bertema Merah & Hitam Logo BDA */}
         <div className="hidden md:flex flex-1 items-center justify-center p-10 lg:p-16 relative overflow-hidden bg-gradient-to-br from-[#090d16] via-[#121826] to-[#1e1014]">
-          {/* Efek pencahayaan lembut merah BDA */}
           <div className="absolute top-1/4 right-1/4 w-80 h-80 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-1/4 left-1/4 w-60 h-60 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -160,27 +182,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </h1>
 
             <p className="text-sm text-slate-300 leading-relaxed mb-8">
-              Platform modern pencatatan tarikan ronda malam, pembayaran QRIS warga, dan buku kas terintegrasi dengan validasi rekonsiliasi realtime.
+              JIMPITANKU by Perum BDA — Platform modern pencatatan tarikan ronda malam bergilir 7 regu harian, pembayaran iuran warga, dan pembukuan kas otomatis.
             </p>
 
-            {/* Fitur keunggulan sistem */}
             <div className="space-y-3.5 border-t border-white/10 pt-6">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-4 h-4 text-red-400 shrink-0" />
                 <span className="text-xs text-slate-200">
-                  Rekonsiliasi otomatis setoran fisik kaleng dan QRIS warga
+                  Rekonsiliasi otomatis setoran fisik toples ronda malam
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <BarChart3 className="w-4 h-4 text-red-400 shrink-0" />
                 <span className="text-xs text-slate-200">
-                  Laporan buku kas dan visualisasi tren per blok RT akurat
+                  Laporan buku kas RT dan visualisasi mutasi siap cetak PDF
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <ShieldCheck className="w-4 h-4 text-red-400 shrink-0" />
                 <span className="text-xs text-slate-200">
-                  Verifikasi dua arah antara petugas ronda lapangan dan bendahara
+                  Privasi terlindungi dan sistem terproteksi cybersecurity dasar
                 </span>
               </div>
             </div>
@@ -198,7 +219,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       </div>
 
       <p className="fixed bottom-3 left-0 right-0 text-center text-[11px] text-slate-400 font-medium">
-        © 2026 RT 02 / RW 07 Bumi Dukuh Asri, Sukoharjo
+        © 2026 JIMPITANKU by Perum BDA (Bumi Dukuh Asri)
       </p>
     </div>
   );

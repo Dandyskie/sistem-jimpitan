@@ -6,56 +6,52 @@ import { AuthProvider } from './context/AuthContext';
 import { PetugasDashboard } from './components/ronda/PetugasDashboard';
 import { AdminDashboardView } from './components/admin/AdminDashboardView';
 import { LoginView } from './components/auth/LoginView';
+import { PortalWargaView } from './components/warga-portal/PortalWargaView';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { useAppData } from './hooks/useAppData';
+import { RouteState, parseAppRoute } from './utils/router';
+
+function getSavedSession(key: string): AuthUser | null {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
 
 export const AppContent: React.FC = () => {
   const todayDate = '2026-10-08';
 
-  // Routing URL: '/' untuk Petugas Ronda, '/admin' untuk Bendahara
-  const [currentPath, setCurrentPath] = useState<string>(() => {
+  const [route, setRoute] = useState<RouteState>(() => {
     if (typeof window !== 'undefined') {
-      return window.location.pathname.startsWith('/admin') ? '/admin' : '/';
+      return parseAppRoute(window.location.pathname, window.location.search);
     }
-    return '/';
+    return { section: 'petugas' };
   });
 
   const navigateUrl = (path: string) => {
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', path);
+      setRoute(parseAppRoute(window.location.pathname, window.location.search));
     }
-    setCurrentPath(path.startsWith('/admin') ? '/admin' : '/');
   };
 
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname;
-      setCurrentPath(path.startsWith('/admin') ? '/admin' : '/');
+      setRoute(parseAppRoute(window.location.pathname, window.location.search));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Sesi Login Terpisah (LocalStorage)
-  const [petugasUser, setPetugasUser] = useState<AuthUser | null>(() => {
-    try {
-      const saved = localStorage.getItem('bda_petugas_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [petugasUser, setPetugasUser] = useState<AuthUser | null>(() =>
+    getSavedSession('bda_petugas_session')
+  );
+  const [adminUser, setAdminUser] = useState<AuthUser | null>(() =>
+    getSavedSession('bda_admin_session')
+  );
 
-  const [adminUser, setAdminUser] = useState<AuthUser | null>(() => {
-    try {
-      const saved = localStorage.getItem('bda_admin_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  // State repositori data terpusat
   const {
     residents,
     setResidents,
@@ -65,7 +61,6 @@ export const AppContent: React.FC = () => {
     setCashTransactions,
   } = useAppData(todayDate);
 
-  // Notifikasi Toast
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -77,7 +72,6 @@ export const AppContent: React.FC = () => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Auth Handlers
   const handlePetugasLogin = (user: AuthUser) => {
     setPetugasUser(user);
     try {
@@ -110,11 +104,9 @@ export const AppContent: React.FC = () => {
     addToast('Sesi admin bendahara telah keluar.', 'info');
   };
 
-  // Jimpitan Handlers
   const handleSaveJimpitan = async (record: Omit<JimpitanRecord, 'id' | 'waktuInput'>) => {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
     const newRecord: JimpitanRecord = {
       ...record,
       id: `jmp-${Date.now()}-${record.residentId}`,
@@ -125,7 +117,6 @@ export const AppContent: React.FC = () => {
     };
 
     setJimpitanRecords((prev) => [newRecord, ...prev.filter((r) => r.residentId !== newRecord.residentId)]);
-
     setResidents((prev) =>
       prev.map((r) => {
         if (r.id !== record.residentId) return r;
@@ -155,20 +146,14 @@ export const AppContent: React.FC = () => {
     addToast('Data tarikan jimpitan berhasil diperbarui.');
   };
 
-  // Warga Handlers
   const handleAddResident = (residentData: Omit<Resident, 'id'>) => {
-    const newResident: Resident = {
-      ...residentData,
-      id: `res-manual-${Date.now()}`,
-    };
+    const newResident: Resident = { ...residentData, id: `res-manual-${Date.now()}` };
     setResidents((prev) => [newResident, ...prev]);
     addToast(`Data warga ${newResident.nama} berhasil ditambahkan.`);
   };
 
   const handleUpdateResident = (id: string, updates: Partial<Resident>) => {
-    setResidents((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
-    );
+    setResidents((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
     addToast('Data warga berhasil diperbarui.');
   };
 
@@ -177,7 +162,6 @@ export const AppContent: React.FC = () => {
     addToast('Data warga berhasil dihapus.', 'info');
   };
 
-  // Kas Handlers
   const handleAddCashTransaction = async (trxData: Omit<CashTransaction, 'id' | 'waktuInput'>) => {
     const newTrx: CashTransaction = {
       ...trxData,
@@ -185,7 +169,6 @@ export const AppContent: React.FC = () => {
       waktuInput: new Date().toLocaleTimeString('id-ID'),
       created_by: adminUser?.id || 'usr-bendahara',
     };
-
     setCashTransactions((prev) => [newTrx, ...prev]);
     await DataService.addKasTransaction(newTrx);
     addToast(`Transaksi ${newTrx.deskripsi} berhasil dibukukan.`);
@@ -206,18 +189,32 @@ export const AppContent: React.FC = () => {
     addToast('Peran jabatan bendahara berhasil diperbarui.');
   };
 
-  // Halaman Admin: Tampilkan form login jika belum diautentikasi
-  if (currentPath === '/admin' && !adminUser) {
+  // 1. Rute Portal Warga Publik (Read-Only via QR)
+  if (route.section === 'warga') {
     return (
       <>
-        <LoginView expectedRole="bendahara" onLogin={handleAdminLogin} onNavigateUrl={navigateUrl} />
+        <PortalWargaView
+          residents={residents}
+          jimpitanRecords={jimpitanRecords}
+          todayDate={todayDate}
+          initialResidentId={route.wargaId}
+          onNavigateUrl={navigateUrl}
+        />
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
       </>
     );
   }
 
-  // Halaman Admin: Tampilkan dashboard jika sudah diautentikasi
-  if (currentPath === '/admin' && adminUser) {
+  // 2. Rute Admin: Form Login atau Dashboard
+  if (route.section === 'admin') {
+    if (!adminUser) {
+      return (
+        <>
+          <LoginView expectedRole="bendahara" onLogin={handleAdminLogin} onNavigateUrl={navigateUrl} />
+          <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        </>
+      );
+    }
 
     return (
       <>
@@ -241,7 +238,7 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // Tampilan Halaman Petugas Ronda (Rute Standar)
+  // 3. Rute Petugas Ronda: Form Login atau Dashboard
   if (!petugasUser) {
     return (
       <>

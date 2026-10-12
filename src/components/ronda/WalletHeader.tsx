@@ -1,6 +1,8 @@
 import React from 'react';
 import { QrCode, ShieldCheck, LogOut, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { formatRupiah, formatTanggalSingkat } from '../../utils/formatters';
+import { getTodayRondaGroup } from '../../data/rondaGroups';
+import { FullscreenButton } from '../common/FullscreenButton';
 
 interface WalletHeaderProps {
   petugasName: string;
@@ -31,10 +33,10 @@ function getConnectionLabel(isOnline: boolean, isSyncing: boolean, pendingCount:
 
 /**
  * Header dompet ronda mobile sesuai referensi mobile-reference1.webp
- * Menggunakan gradien merah crimson dan hitam tugu khas logo BDA
+ * JIMPITANKU by Perum BDA (Bumi Dukuh Asri)
  */
 export const WalletHeader: React.FC<WalletHeaderProps> = ({
-  petugasName,
+  petugasName: _petugasName,
   todayDate,
   totalCollectedToday,
   progressPercent,
@@ -51,32 +53,32 @@ export const WalletHeader: React.FC<WalletHeaderProps> = ({
 }) => {
   const connectionLabel = getConnectionLabel(isOnline, isSyncing, pendingCount);
   const showWarning = !isOnline || pendingCount > 0;
+  const todayGroup = getTodayRondaGroup(todayDate);
 
   return (
     <>
       {/* Bar navigasi atas aplikasi mobile dengan efek frosted glass */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3">
-        <div className="max-w-xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <img
-                src="/bda-logo.jpg"
-                alt="Logo BDA"
-                className="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-xs"
-              />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-600 rounded-full border border-white" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-red-700 tracking-wider uppercase">
-                Jimpitan RT 02 · {formatTanggalSingkat(todayDate)}
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/bda-logo.jpg"
+              alt="Logo BDA"
+              className="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-xs shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-red-700 tracking-wider uppercase truncate">
+                JIMPITANKU • {formatTanggalSingkat(todayDate)}
               </p>
-              <h1 className="text-sm font-bold text-slate-900 leading-tight">
-                {petugasName}
+              <h1 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate">
+                {todayGroup.salam}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Tombol Fullscreen khusus mobile */}
+            <FullscreenButton />
             {/* Tombol sinkronisasi status Supabase */}
             <button
               type="button"

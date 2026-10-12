@@ -108,10 +108,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           />
           <div className="min-w-0">
             <h2 className="text-sm font-black text-slate-900 truncate leading-tight">
-              Jimpitan BDA
+              JIMPITANKU
             </h2>
             <p className="text-[11px] text-slate-400 font-medium truncate">
-              RT 02 / RW 07 Sukoharjo
+              Perum Bumi Dukuh Asri
             </p>
           </div>
         </div>

@@ -28,7 +28,8 @@ async function fetchOnlineResidents(): Promise<Resident[] | null> {
     const { data, error } = await supabase!
       .from('warga')
       .select('*')
-      .order('urutan_rute', { ascending: true });
+      .order('urutan_rute', { ascending: true })
+      .limit(5);
 
     if (error || !data || data.length === 0) return null;
 
@@ -106,6 +107,23 @@ async function sendJimpitanOnline(record: JimpitanRecord): Promise<boolean> {
   }
 }
 
+// Ambil riwayat jimpitan khusus warga dari Supabase
+async function fetchOnlineJimpitanByResident(wargaId: string): Promise<JimpitanRecord[] | null> {
+  try {
+    const { data, error } = await supabase!
+      .from('jimpitan_records')
+      .select('*')
+      .eq('warga_id', wargaId)
+      .order('tanggal', { ascending: false });
+
+    if (error || !data) return null;
+    return data;
+  } catch (err) {
+    console.warn('Gagal mengambil jimpitan warga dari Supabase:', err);
+    return null;
+  }
+}
+
 // Perbarui cache catatan jimpitan lokal
 function updateLocalJimpitanCache(record: JimpitanRecord): void {
   try {
@@ -158,6 +176,28 @@ export const DataService = {
     }
 
     return records;
+  },
+
+  // Ambil catatan jimpitan untuk satu rumah warga tertentu
+  async getJimpitanRecordsByResident(residentId: string): Promise<JimpitanRecord[]> {
+    const canQueryOnline = isSupabaseConfigured && Boolean(supabase) && navigator.onLine;
+    const onlineRecords = canQueryOnline ? await fetchOnlineJimpitanByResident(residentId) : null;
+    if (onlineRecords && onlineRecords.length > 0) return onlineRecords;
+
+    const queue = getOfflineQueue();
+    const offlineItems = queue
+      .filter(
+        (q) =>
+          q.type === 'UPSERT_JIMPITAN' &&
+          (q.payload.warga_id === residentId || q.payload.residentId === residentId)
+      )
+      .map((q) => q.payload as JimpitanRecord);
+
+    const initialMatches = initialJimpitanRecords.filter(
+      (r) => r.residentId === residentId || r.warga_id === residentId
+    );
+
+    return [...offlineItems, ...initialMatches];
   },
 
   // Simpan atau perbarui data tarikan jimpitan

@@ -5,6 +5,20 @@ import { initialJimpitanRecords, initialCashTransactions } from '../data/transac
 import { DataService } from '../services/dataService';
 import { STORAGE_KEYS } from '../services/offlineQueue';
 
+const CACHE_VERSION = 'v2_fresh_5warga';
+
+// Reset cache lama jika versi sampel data diperbarui
+function checkAndInvalidateLegacyCache(todayDate: string) {
+  try {
+    if (localStorage.getItem('bda_cache_version') !== CACHE_VERSION) {
+      localStorage.removeItem(STORAGE_KEYS.WARGA_CACHE);
+      localStorage.removeItem(STORAGE_KEYS.KAS_CACHE);
+      localStorage.removeItem(`${STORAGE_KEYS.JIMPITAN_CACHE}_${todayDate}`);
+      localStorage.setItem('bda_cache_version', CACHE_VERSION);
+    }
+  } catch {}
+}
+
 // Baca cache awal dari localStorage
 function readInitialCache<T>(key: string, fallback: T): T {
   try {
@@ -16,6 +30,8 @@ function readInitialCache<T>(key: string, fallback: T): T {
 }
 
 export function useAppData(todayDate: string) {
+  checkAndInvalidateLegacyCache(todayDate);
+
   const [residents, setResidents] = useState<Resident[]>(() =>
     readInitialCache(STORAGE_KEYS.WARGA_CACHE, initialResidents)
   );
@@ -39,13 +55,11 @@ export function useAppData(todayDate: string) {
     });
 
     DataService.getJimpitanRecordsByDate(todayDate).then((records) => {
-      const shouldUpdate = isMounted && records.length > 0;
-      if (shouldUpdate) setJimpitanRecords(records);
+      if (isMounted) setJimpitanRecords(records);
     });
 
     DataService.getKasTransactions().then((txs) => {
-      const shouldUpdate = isMounted && txs.length > 0;
-      if (shouldUpdate) setCashTransactions(txs);
+      if (isMounted) setCashTransactions(txs);
     });
 
     // Berlangganan perubahan realtime Supabase
