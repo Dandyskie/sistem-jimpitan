@@ -75,24 +75,24 @@ export const PortalWargaView: React.FC<PortalWargaViewProps> = ({
               className="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-xs"
             />
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
+              {/* <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
                 Privasi Portal Warga
-              </span>
+              </span> */}
               <span className="text-xs sm:text-sm font-bold text-slate-900 leading-tight block">
-                JIMPITANKU by Perum BDA
+                PORTAL JIMPITAN WARGA BDA
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <FullscreenButton />
-            <button
+            {/* <button
               type="button"
               onClick={() => onNavigateUrl('/')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
             >
               <LogIn className="w-3.5 h-3.5 text-slate-500" />
               <span>Login Petugas / RT</span>
-            </button>
+            </button> */}
           </div>
         </header>
 
@@ -127,7 +127,7 @@ export const PortalWargaView: React.FC<PortalWargaViewProps> = ({
           <button
             type="button"
             onClick={() => onNavigateUrl('/')}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
+            className="w-full py-2.5 px-2 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
           >
             Kembali ke Halaman Depan
           </button>
@@ -135,7 +135,7 @@ export const PortalWargaView: React.FC<PortalWargaViewProps> = ({
 
         <footer className="py-4 px-4 text-center border-t border-slate-200/80 bg-white text-[11px] text-slate-500">
           <p className="font-semibold text-slate-700">JIMPITANKU by Perum BDA</p>
-          <p>RT 02 / RW 07 Bumi Dukuh Asri • Menjaga Privasi & Keamanan Warga</p>
+          <p>Menjaga Privasi & Keamanan Warga</p>
         </footer>
       </div>
     );
